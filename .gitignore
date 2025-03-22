@@ -1,0 +1,15 @@
+/vendor/*
+config*.json
+.vscode
+.idea
+*.exe
+*.exe~
+Dockerfile
+docker-compose.yml
+demo.config.json
+tmp/
+tmp/build-errors.log
+stg3.config.json
+/logs/*
+routes.json
+__debug_bin*

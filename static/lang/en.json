@@ -1,0 +1,36 @@
+[
+  {
+    "message": "Hello Word",
+    "translation": "Hello Word"
+  },
+  {
+    "message": "%d task(s) remaining!",
+    "translation": {
+      "arg": 1,
+      "format": "%d",
+      "case": [
+        "=1",
+        "One task remaining!",
+        "=2",
+        "Two tasks remaining!",
+        "other",
+        "%[1]d tasks remaining!"
+      ]
+    }
+  },
+  {
+    "message": "%v, %d task(s) remaining!",
+    "translation": {
+      "arg": 2,
+      "format": "%d",
+      "case": [
+        "=1",
+        "%[1]v, One task remaining!",
+        "=2",
+        "%[1]v, Two tasks remaining!",
+        "other",
+        "%[1]v, %[2]d tasks remaining!"
+      ]
+    }
+  }
+]
