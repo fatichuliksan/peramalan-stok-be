@@ -1,0 +1,15 @@
+{
+    "app":{
+        "host":"localhost",
+        "port":3000
+    },
+    "database":{
+        "postgre":{
+            "host":"localhost",
+            "port":5432,
+            "user":"postgres",
+            "password":"postgrespw",
+            "database":"ta"
+        }
+    }
+}

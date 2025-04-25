@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"peramalan-stok-be/src/helper/logger"
 	"peramalan-stok-be/src/helper/postgre"
@@ -16,7 +15,6 @@ import (
 
 	"peramalan-stok-be/src/delivery/api"
 
-	"github.com/getsentry/sentry-go"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
@@ -38,23 +36,6 @@ func main() {
 	}
 
 	db := database(config, timeLocation)
-
-	_ = sentry.Init(sentry.ClientOptions{
-		Dsn: config.GetString(`glitchtip.dsn`),
-		BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
-			if hint.Context != nil {
-				if req, ok := hint.Context.Value(sentry.RequestContextKey).(*http.Request); ok {
-					// You have access to the original Request
-					logger.Default().Println(req)
-				}
-			}
-			logger.Default().Println(event)
-			return event
-		},
-		EnableTracing:    true,
-		TracesSampleRate: 1.0,
-		Debug:            true,
-	})
 
 	api := api.NewAPI{
 		Echo:      echo.New(),
