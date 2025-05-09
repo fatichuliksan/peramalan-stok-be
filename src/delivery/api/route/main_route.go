@@ -14,6 +14,4 @@ func (t *NewRoute) MainRoute(g *echo.Group) {
 	}
 	g.GET("/warehouses", h.GetWarehouses)
 	g.GET("/items", h.GetItems)
-	g.GET("/history/sales-order", h.GetHistorySalesOrder)
-	g.GET("/history/sales-order-monthly", h.GetHistorySalesOrderMonthly)
 }

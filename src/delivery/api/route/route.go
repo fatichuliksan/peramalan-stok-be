@@ -62,5 +62,7 @@ func (t *NewRoute) Register() {
 	t.Echo.Use(customMiddleware)
 
 	t.PingRoute(groupV1.Group("/ping"))
+	t.HistoryRoute(groupV1.Group("/history"))
 	t.MainRoute(groupV1.Group("/main"))
+	t.ForcastingRoute(groupV1.Group("/forcasting"))
 }
