@@ -13,4 +13,6 @@ func (t *NewRoute) ForcastingRoute(g *echo.Group) {
 		DB:       t.DB,
 	}
 	g.POST("/generate", h.PostGenerate)
+	g.POST("/history", h.PostHistory)
+	g.GET("/history", h.GetHistory)
 }
