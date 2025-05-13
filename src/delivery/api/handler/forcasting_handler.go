@@ -302,3 +302,33 @@ func (t *ForecastingHandler) GetHistory(c echo.Context) error {
 		"total_page":            totalPages,
 	})
 }
+
+func (t *ForecastingHandler) DeleteHistory(c echo.Context) error {
+
+	response := []map[string]interface{}{}
+
+	// Get the request body
+	type Req struct {
+		ID uint64 `json:"id" query:"id"`
+	}
+
+	var req Req
+	err := c.Bind(&req)
+	if err != nil {
+		return err
+	}
+
+	if req.ID == 0 {
+		return t.Response.SendBadRequest(c, "id is required", nil)
+	}
+
+	var histories = model.History{}
+
+	err = t.DB.Debug().Delete(&histories, req.ID).Error
+	if err != nil {
+		return t.Response.SendError(c, "error delete history", nil)
+	}
+
+	return t.Response.SendSuccess(c, "success to delete history data", response)
+
+}
