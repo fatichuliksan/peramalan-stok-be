@@ -15,4 +15,5 @@ func (t *NewRoute) HistoryRoute(g *echo.Group) {
 
 	g.GET("/sales-order", h.GetHistorySalesOrder)
 	g.GET("/sales-order-monthly", h.GetHistorySalesOrderMonthly)
+	g.GET("/sales-order-monthly-chart", h.GetHistorySalesOrderMonthlyChart)
 }

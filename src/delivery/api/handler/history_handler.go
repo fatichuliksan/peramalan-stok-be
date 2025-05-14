@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"math"
 	"peramalan-stok-be/src/helper/response"
 	"peramalan-stok-be/src/model"
@@ -210,4 +211,129 @@ func (t *HistoryHandler) GetHistorySalesOrderMonthly(c echo.Context) error {
 		"total_record_search":   totalSearch,
 		"total_page":            totalPages,
 	})
+}
+
+func (t *HistoryHandler) GetHistorySalesOrderMonthlyChart(c echo.Context) error {
+	type Req struct {
+		WarehouseCode string `query:"warehouse_code"`
+		ItemCode      string `query:"item_code"`
+		DateStart     string `query:"date_start"`
+		DateEnd       string `query:"date_end"`
+	}
+
+	var req Req
+	if err := c.Bind(&req); err != nil {
+		return err
+	}
+
+	db := t.DB.Debug().Model(&model.SalesOrderMonthly{})
+
+	if req.WarehouseCode != "" {
+		db = db.Where("warehouse_code = ?", req.WarehouseCode)
+	}
+
+	if req.ItemCode != "" {
+		db = db.Where("item_code = ?", req.ItemCode)
+	}
+
+	if req.DateStart != "" && req.DateEnd != "" {
+		dateStart, err := time.Parse("2006-01-02", req.DateStart)
+		if err != nil {
+			return t.Response.SendError(c, err.Error(), nil)
+		}
+
+		dateEnd, err := time.Parse("2006-01-02", req.DateEnd)
+		if err != nil {
+			return t.Response.SendError(c, err.Error(), nil)
+		}
+
+		db = db.Where("year >= ? and month >= ?", dateStart.Year(), int(dateStart.Month()))
+		db = db.Where("year <= ? and month <= ?", dateEnd.Year(), int(dateEnd.Month()))
+
+	}
+	dataGroupByWarehouseSku := []map[string]interface{}{}
+	DBdataGroupByWarehouseSku := db
+
+	data := []model.SalesOrderMonthly{}
+	db.Order("year, month").Find(&data)
+
+	DBdataGroupByWarehouseSku.Select("warehouse_code, item_code, year, month").Group("warehouse_code, item_code, year, month").Scan(&dataGroupByWarehouseSku)
+
+	startDate := time.Time{}
+	endDate := time.Time{}
+
+	tempDataPerWarehousePerSku := make(map[string]map[string]interface{})
+	for _, record := range dataGroupByWarehouseSku {
+		tempDataPerWarehousePerSku[fmt.Sprintf("%v-%v", record["warehouse_code"], record["item_code"])] = map[string]interface{}{
+			"warehouse_code": record["warehouse_code"],
+			"item_code":      record["item_code"],
+		}
+
+		if startDate.IsZero() || int(record["year"].(int32)) < startDate.Year() || (int(record["year"].(int32)) == startDate.Year() && int(record["month"].(int32)) < int(startDate.Month())) {
+			startDate = time.Date(int(record["year"].(int32)), time.Month(int(record["month"].(int32))), 1, 0, 0, 0, 0, time.UTC)
+		}
+		if endDate.IsZero() || int(record["year"].(int32)) > endDate.Year() || (int(record["year"].(int32)) == endDate.Year() && int(record["month"].(int32)) > int(endDate.Month())) {
+			endDate = time.Date(int(record["year"].(int32)), time.Month(int(record["month"].(int32))), 1, 0, 0, 0, 0, time.UTC)
+		}
+	}
+
+	if len(data) == 0 {
+		return t.Response.SendError(c, "Data Not Found", nil)
+	}
+	// Create a map to hold the chart data
+
+	labels := getMonthsBetween(startDate, endDate)
+	chartData := make(map[string]map[string]interface{}, 0)
+
+	for _, record := range data {
+		key := fmt.Sprintf("%v-%v", record.WarehouseCode, record.ItemCode)
+
+		// set the default value to 0 if the year mont does not exist
+		for _, label := range labels {
+			yearMonth, _ := time.Parse("2006-01", label)
+
+			if record.Year == yearMonth.Year() && record.Month == int(yearMonth.Month()) {
+				if _, ok := chartData[key]; !ok {
+					chartData[key] = map[string]interface{}{yearMonth.Format("2006-01"): record.Qty}
+				} else {
+					chartData[key][yearMonth.Format("2006-01")] = record.Qty
+				}
+			}
+		}
+	}
+
+	chartDataFinal := make([]map[string]interface{}, 0)
+	for idx, c := range chartData {
+		var data []interface{}
+
+		for _, d := range c {
+			data = append(data, d)
+		}
+
+		chartDataFinal = append(chartDataFinal, map[string]interface{}{
+			"name":   idx,
+			"type":   "line",
+			"smooth": true,
+			"data":   data,
+		})
+	}
+
+	return t.Response.SendSuccess(c, "", map[string]interface{}{
+		"labels": labels,
+		"charts": chartDataFinal,
+	})
+}
+
+func getMonthsBetween(start, end time.Time) []string {
+	var months []string
+
+	// Normalize to first day of the month
+	start = time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end = time.Date(end.Year(), end.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	for current := start; !current.After(end); current = current.AddDate(0, 1, 0) {
+		months = append(months, current.Format("2006-01")) // Format as YYYY-MM
+	}
+
+	return months
 }
