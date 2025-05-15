@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"peramalan-stok-be/src/helper/response"
 	"peramalan-stok-be/src/model"
@@ -155,6 +156,9 @@ func (t *HistoryHandler) GetHistorySalesOrderMonthly(c echo.Context) error {
 		if err != nil {
 			return t.Response.SendError(c, err.Error(), nil)
 		}
+
+		log.Println(dateStart.Month(), int(dateStart.Month()))
+		log.Println(dateEnd.Month(), int(dateEnd.Month()))
 
 		db = db.Where("year >= ? and month >= ?", dateStart.Year(), int(dateStart.Month()))
 		db = db.Where("year <= ? and month <= ?", dateEnd.Year(), int(dateEnd.Month()))
