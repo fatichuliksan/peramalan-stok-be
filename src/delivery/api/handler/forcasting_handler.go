@@ -68,8 +68,8 @@ func (t *ForecastingHandler) PostGenerate(c echo.Context) error {
 		return t.Response.SendBadRequest(c, "date start must be before date end", nil)
 	}
 
-	// validate minimal range of 4 months
-	if dateEnd.Sub(dateStart).Hours() < 30*24*4 { // 4 months
+	// validate minimal range of 4 months, from month range of dateStart and dateEnd
+	if dateStart.Year() == dateEnd.Year() && int(dateEnd.Month())-int(dateStart.Month()) < 4 {
 		return t.Response.SendBadRequest(c, "period must be at least 4 months", nil)
 	}
 
@@ -104,11 +104,22 @@ func (t *ForecastingHandler) PostGenerate(c echo.Context) error {
 			continue
 		}
 
+		log.Println("checking month at index", index, "year", gl["year"], "month", gl["month"], "nextYear", nextYear, "nextMonth", nextMonth)
+
 		if gl["year"].(int32) != nextYear && gl["month"].(int32) != nextMonth {
 			isValid = false
 			log.Printf("missing month at index %d: year %d, month %d", index, nextYear, nextMonth)
 			break
 		}
+
+		if gl["month"].(int32) == 12 {
+			nextYear = gl["year"].(int32) + 1
+			nextMonth = 1
+		} else {
+			nextYear = gl["year"].(int32)
+			nextMonth = gl["month"].(int32) + 1
+		}
+
 	}
 
 	mape := generateLines[len(generateLines)-1]["e_sig"].(float64)
