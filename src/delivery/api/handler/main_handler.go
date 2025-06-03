@@ -39,6 +39,7 @@ func (t *MainHandler) GetWarehouses(c echo.Context) error {
 
 func (t *MainHandler) GetItems(c echo.Context) error {
 	query := c.QueryParam("query")
+	warehouse_code := c.QueryParam("warehouse_code")
 	limit, _ := strconv.Atoi(c.QueryParam("limit"))
 
 	if limit == 0 {
@@ -50,6 +51,10 @@ func (t *MainHandler) GetItems(c echo.Context) error {
 
 	if query != "" {
 		db.Where("(item_code ILIKE ? or item_name ILIKE ? )", "'%"+query+"%'", "'%"+query+"%'")
+	}
+
+	if warehouse_code != "" {
+		db.Where("warehouse_code = ?", warehouse_code)
 	}
 
 	db.Find(&items)

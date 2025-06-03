@@ -68,6 +68,11 @@ func (t *ForecastingHandler) PostGenerate(c echo.Context) error {
 		return t.Response.SendBadRequest(c, "date start must be before date end", nil)
 	}
 
+	// validate minimal range of 4 months
+	if dateEnd.Sub(dateStart).Hours() < 30*24*4 { // 4 months
+		return t.Response.SendBadRequest(c, "period must be at least 4 months", nil)
+	}
+
 	startYear := dateStart.Year()
 	startMonth := int(dateStart.Month())
 	endYear := dateEnd.Year()
@@ -83,16 +88,41 @@ func (t *ForecastingHandler) PostGenerate(c echo.Context) error {
 		return t.Response.SendError(c, "no data generated, please check actual data in choosed period", nil)
 	}
 
+	// check generateLines for no missing months
+	isValid := true
+	nextYear := int32(0)
+	nextMonth := int32(0)
+	for index, gl := range generateLines {
+		if index == 0 {
+			if gl["month"].(int32) == 12 {
+				nextYear = gl["year"].(int32) + 1
+				nextMonth = 1
+			} else {
+				nextYear = gl["year"].(int32)
+				nextMonth = gl["month"].(int32) + 1
+			}
+			continue
+		}
+
+		if gl["year"].(int32) != nextYear && gl["month"].(int32) != nextMonth {
+			isValid = false
+			log.Printf("missing month at index %d: year %d, month %d", index, nextYear, nextMonth)
+			break
+		}
+	}
+
 	mape := generateLines[len(generateLines)-1]["e_sig"].(float64)
-	mapeCriteria := "Unknown"
-	if mape >= 0 && mape < 10 {
-		mapeCriteria = "Highly Accurate"
-	} else if mape >= 10 && mape < 20 {
-		mapeCriteria = "Accurate"
-	} else if mape >= 20 && mape < 50 {
-		mapeCriteria = "Less Accurate"
-	} else if mape >= 50 {
-		mapeCriteria = "Inaccurate"
+	mapeCriteria := "Invalid"
+	if len(generateLines) > 3 && isValid {
+		if mape >= 0 && mape < 10 {
+			mapeCriteria = "Highly Accurate"
+		} else if mape >= 10 && mape < 20 {
+			mapeCriteria = "Accurate"
+		} else if mape >= 20 && mape < 50 {
+			mapeCriteria = "Less Accurate"
+		} else if mape >= 50 {
+			mapeCriteria = "Inaccurate"
+		}
 	}
 
 	req.ForcastPeriod = 1
