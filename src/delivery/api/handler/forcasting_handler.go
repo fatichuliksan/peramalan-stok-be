@@ -108,8 +108,7 @@ func (t *ForecastingHandler) PostGenerate(c echo.Context) error {
 
 		if gl["year"].(int32) != nextYear && gl["month"].(int32) != nextMonth {
 			isValid = false
-			log.Printf("missing month at index %d: year %d, month %d", index, nextYear, nextMonth)
-			break
+			return t.Response.SendBadRequest(c, "generate has missing data at year: "+string(gl["year"].(int32))+", month: "+string(gl["month"].(int32)), nil)
 		}
 
 		if gl["month"].(int32) == 12 {
