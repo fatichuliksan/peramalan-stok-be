@@ -287,38 +287,50 @@ func (t *HistoryHandler) GetHistorySalesOrderMonthlyChart(c echo.Context) error 
 	// Create a map to hold the chart data
 
 	labels := getMonthsBetween(startDate, endDate)
-	chartData := make(map[string]map[string]interface{}, 0)
+	chartData := make(map[string][]int, 0)
 
 	for _, record := range data {
-		key := fmt.Sprintf("%v-%v", record.WarehouseCode, record.ItemCode)
-
-		// set the default value to 0 if the year mont does not exist
-		for _, label := range labels {
-			yearMonth, _ := time.Parse("2006-01", label)
-
-			if record.Year == yearMonth.Year() && record.Month == int(yearMonth.Month()) {
-				if _, ok := chartData[key]; !ok {
-					chartData[key] = map[string]interface{}{yearMonth.Format("2006-01"): record.Qty}
-				} else {
-					chartData[key][yearMonth.Format("2006-01")] = record.Qty
-				}
-			}
+		// Initialize the chartData map for the key if it doesn't exist
+		if _, ok := chartData[fmt.Sprintf("%v-%v", record.WarehouseCode, record.ItemCode)]; !ok {
+			chartData[fmt.Sprintf("%v-%v", record.WarehouseCode, record.ItemCode)] = make([]int, 0)
 		}
 	}
 
-	chartDataFinal := make([]map[string]interface{}, 0)
-	for idx, c := range chartData {
-		var data []interface{}
+	var isFound bool
+	for key, cd := range chartData {
+		for _, label := range labels {
+			isFound = false
+			yearMonth, err := time.Parse("2006-01", label)
+			if err != nil {
+				return t.Response.SendError(c, "Invalid date format in labels", nil)
+			}
 
-		for _, d := range c {
-			data = append(data, d)
+			for _, record := range data {
+				if fmt.Sprintf("%v-%v", record.WarehouseCode, record.ItemCode) == key {
+					// Check if the year and month match the label
+					if record.Year == yearMonth.Year() && record.Month == int(yearMonth.Month()) {
+						cd = append(cd, record.Qty)
+						isFound = true
+						break
+					}
+				}
+			}
+
+			if !isFound {
+				cd = append(cd, 0)
+			}
 		}
 
+		chartData[key] = cd
+	}
+
+	chartDataFinal := make([]map[string]interface{}, 0)
+	for idx, cd := range chartData {
 		chartDataFinal = append(chartDataFinal, map[string]interface{}{
 			"name":   idx,
 			"type":   "line",
 			"smooth": true,
-			"data":   data,
+			"data":   cd,
 		})
 	}
 
