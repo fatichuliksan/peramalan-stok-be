@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"peramalan-stok-be/src/helper/response"
 	"peramalan-stok-be/src/model"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -88,37 +90,39 @@ func (t *ForecastingHandler) PostGenerate(c echo.Context) error {
 		return t.Response.SendError(c, "no data generated, please check actual data in choosed period", nil)
 	}
 
+	dateRanges := getMonthsBetween(dateStart, dateEnd)
+
 	// check generateLines for no missing months
 	isValid := true
-	nextYear := int32(0)
-	nextMonth := int32(0)
-	for index, gl := range generateLines {
-		if index == 0 {
-			if gl["month"].(int32) == 12 {
-				nextYear = gl["year"].(int32) + 1
-				nextMonth = 1
-			} else {
-				nextYear = gl["year"].(int32)
-				nextMonth = gl["month"].(int32) + 1
+	messageInvalid := []string{}
+	isFound := false
+
+	for _, dr := range dateRanges {
+		yearMonth, err := time.Parse("2006-01", dr)
+		if err != nil {
+			return t.Response.SendBadRequest(c, "invalid date range", nil)
+		}
+
+		year := int32(yearMonth.Year())
+		month := int32(yearMonth.Month())
+
+		isFound = false
+
+		for _, gl := range generateLines {
+			if gl["year"].(int32) == year && gl["month"].(int32) == month {
+				isFound = true
+				break
 			}
-			continue
 		}
 
-		log.Println("checking month at index", index, "year", gl["year"], "month", gl["month"], "nextYear", nextYear, "nextMonth", nextMonth)
-
-		if gl["year"].(int32) != nextYear && gl["month"].(int32) != nextMonth {
-			isValid = false
-			return t.Response.SendBadRequest(c, "generate has missing data at year: "+string(gl["year"].(int32))+", month: "+string(gl["month"].(int32)), nil)
+		if !isFound {
+			messageInvalid = append(messageInvalid, fmt.Sprintf("missing data at year: %d, month: %d", year, month))
 		}
+	}
 
-		if gl["month"].(int32) == 12 {
-			nextYear = gl["year"].(int32) + 1
-			nextMonth = 1
-		} else {
-			nextYear = gl["year"].(int32)
-			nextMonth = gl["month"].(int32) + 1
-		}
-
+	if len(messageInvalid) > 0 {
+		isValid = false
+		return t.Response.SendBadRequest(c, strings.Join(messageInvalid, ", "), nil)
 	}
 
 	mape := generateLines[len(generateLines)-1]["e_sig"].(float64)
