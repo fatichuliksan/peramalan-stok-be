@@ -146,12 +146,16 @@ func (t *ForecastingHandler) PostGenerate(c echo.Context) error {
 	bb := generateLines[len(generateLines)-1]["b"].(float64)
 	cc := generateLines[len(generateLines)-1]["c"].(float64)
 	for i := 0; i < req.ForcastPeriod; i++ {
+		f := aa + bb*float64(i+1) + 0.5*cc*float64(i+1)
+		if f < 0 {
+			f = 0
+		}
 		forecastLines = append(forecastLines, map[string]interface{}{
 			"t": i + 1,
 			"a": aa,
 			"b": bb,
 			"c": cc,
-			"f": aa + bb*float64(i+1) + 0.5*cc*float64(i+1),
+			"f": f,
 		})
 	}
 
